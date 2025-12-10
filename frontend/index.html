@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ThamAI PRO ULTRA v4 — Free</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1>ThamAI PRO ULTRA v4 — Free Mode</h1>
+      <p class="sub">Dark Premium · Trợ lý AI cá nhân</p>
+    </header>
+
+    <main id="chatbox" class="chatbox" aria-live="polite"></main>
+
+    <div class="controls">
+      <textarea id="userInput" class="input" placeholder="Nhập tin nhắn... (Enter để gửi)"></textarea>
+      <div class="controls-right">
+        <label for="voiceSelect" class="muted">Giọng</label>
+        <select id="voiceSelect" class="voice-select">
+          <option value="female">Nữ</option>
+          <option value="male">Nam</option>
+        </select>
+        <button id="micBtn" class="btn mic" title="Ghi âm">🎤</button>
+        <button id="sendBtn" class="btn send" title="Gửi">Gửi</button>
+      </div>
+    </div>
+
+    <audio id="audio-player" hidden></audio>
+  </div>
+
+  <script type="module" src="/script.js"></script>
+</body>
+</html>
