@@ -2,11 +2,8 @@
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
-const fetch = require("node-fetch");
-
-// ⭐ FIX: Khai báo biến môi trường tránh lỗi ReferenceError
+const fetch = require("node-fetch"); // optional: used only if OPENAI_API_KEY present
 const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
-
 const app = express();
 
 app.use(cors());
@@ -59,17 +56,20 @@ async function callOpenAI(message) {
 }
 
 // POST /chat
+// body: { message: string, want_tts?: boolean, voice?: "female"|"male" }
 app.post("/chat", async (req, res) => {
   try {
     const message = (req.body && req.body.message) || "";
     if (!message) return res.status(400).json({ error: "Missing message" });
 
+    // If user provided OPENAI key (env), use it first. Otherwise fallback to local reply.
     let reply = null;
     if (OPENAI_KEY) {
       reply = await callOpenAI(message);
     }
     if (!reply) reply = simpleReply(message);
 
+    // For free mode we do NOT generate server-side audio. Frontend will use SpeechSynthesis.
     return res.json({ reply, audio_base64: null });
   } catch (err) {
     console.error("chat handler err:", err);
