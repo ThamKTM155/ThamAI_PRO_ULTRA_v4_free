@@ -3,6 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const fetch = require("node-fetch"); // optional: used only if OPENAI_API_KEY present
+const OPENAI_KEY = process.env.OPENAI_API_KEY || "";
 const app = express();
 
 app.use(cors());
