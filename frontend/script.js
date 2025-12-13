@@ -84,10 +84,10 @@ async function sendMessage() {
 userInput.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    sendMessage();
+   sendMessageStream();
   }
 });
-sendBtn.addEventListener("click", sendMessage);
+sendBtn.addEventListener("click", sendMessageStream);
 
 // Mic using Web Speech API (browser)
 if (micBtn) {
@@ -109,4 +109,46 @@ if (micBtn) {
     r.onerror = (e) => console.error("STT error", e);
     r.start();
   });
+}
+async function sendMessageStream() {
+  const text = userInput.value.trim();
+  if (!text) return;
+
+  appendUser(text);
+  userInput.value = "";
+
+  const aiDiv = document.createElement("div");
+  aiDiv.className = "msg ai";
+  chatBox.appendChild(aiDiv);
+  chatBox.scrollTop = chatBox.scrollHeight;
+
+  try {
+    const resp = await fetch(
+      "https://thamai-pro-ultra-v4-free.onrender.com/chat-stream",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: text })
+      }
+    );
+
+    const reader = resp.body.getReader();
+    const decoder = new TextDecoder("utf-8");
+    let fullText = "";
+
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value, { stream: true });
+      fullText += chunk;
+      aiDiv.textContent = fullText;
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+
+    speak(fullText, voiceSelect.value);
+
+  } catch (e) {
+    aiDiv.textContent = "❗ Lỗi streaming.";
+    console.error(e);
+  }
 }
