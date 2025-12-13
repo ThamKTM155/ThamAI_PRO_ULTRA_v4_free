@@ -106,7 +106,10 @@ if (micBtn) {
       userInput.value = txt;
       sendMessage();
     };
-    r.onerror = (e) => console.error("STT error", e);
+   r.onerror = (e) => {
+  if (e.error === "no-speech" || e.error === "aborted") return;
+  console.error("STT error", e);
+};
     r.start();
   });
 }
