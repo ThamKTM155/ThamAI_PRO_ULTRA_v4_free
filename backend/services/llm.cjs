@@ -1,62 +1,51 @@
-// backend/services/llm.cjs
-import fetch from "node-fetch";
-import {
-  OPENAI_KEY,
-  MODEL_NAME,
-  MAX_TOKENS,
-  SYSTEM_PROMPT
-} from "../config.cjs";
+const fetch = require("node-fetch");
+const { api, limits } = require("../config.cjs");
 
-/* ---------- fallback FREE ---------- */
-function freeReply(user) {
-  const u = user.toLowerCase();
+/**
+ * Lấy phản hồi từ OpenAI nếu có key,
+ * nếu không → fallback FREE mode
+ */
+async function getReply(message) {
+  const text = (message || "").trim();
+  if (!text) return "Bạn chưa nhập nội dung.";
 
-  if (/xin chào|chào/.test(u))
-    return "Chào bạn 👋 Mình là ThamAI v5 (chế độ miễn phí).";
+  // FREE MODE
+  if (!api.openaiKey) {
+    if (/xin chào|chào/i.test(text)) {
+      return "Chào bạn! Mình là ThamAI v5 (chế độ miễn phí).";
+    }
+    return `Echo (FREE): ${text}`;
+  }
 
-  if (/giúp|làm gì/.test(u))
-    return "Mình có thể trò chuyện, hỗ trợ học tập, lập trình và ý tưởng.";
-
-  return `Bạn vừa nói: "${user}"`;
-}
-
-/* ---------- OpenAI (non-stream, ổn định) ---------- */
-async function callOpenAI(message) {
-  if (!OPENAI_KEY) return null;
-
+  // OPENAI MODE
   try {
     const res = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_KEY}`,
+        "Authorization": `Bearer ${api.openaiKey}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify({
-        model: MODEL_NAME,
+        model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: message }
+          { role: "system", content: "Bạn là ThamAI v5, trả lời ngắn gọn, rõ ràng." },
+          { role: "user", content: text }
         ],
-        max_tokens: MAX_TOKENS
+        max_tokens: limits.maxTokens
       })
     });
 
     if (!res.ok) {
       console.error("OpenAI error:", res.status);
-      return null;
+      return "Hệ thống AI đang bận, vui lòng thử lại sau.";
     }
 
     const json = await res.json();
-    return json?.choices?.[0]?.message?.content || null;
+    return json?.choices?.[0]?.message?.content || "Không có phản hồi.";
   } catch (e) {
-    console.error("OpenAI exception:", e);
-    return null;
+    console.error("LLM error:", e);
+    return "Lỗi kết nối AI.";
   }
 }
 
-/* ---------- PUBLIC API ---------- */
-export async function getReply(message) {
-  const ai = await callOpenAI(message);
-  if (ai) return ai;
-  return freeReply(message);
-}
+module.exports = { getReply };
