@@ -1,5 +1,5 @@
 // script.js — frontend (module)
-const API_URL = window.API_URL || "http://localhost:3000/chat";
+const API_URL = "https://thamai-pro-ultra-v4-free.onrender.com/chat";
 
 const chatBox = document.getElementById("chatbox");
 const userInput = document.getElementById("userInput");
