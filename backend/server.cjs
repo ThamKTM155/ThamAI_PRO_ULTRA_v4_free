@@ -1,4 +1,3 @@
-// backend/server.cjs
 const express = require("express");
 const cors = require("cors");
 const bodyParser = require("body-parser");
@@ -8,23 +7,18 @@ const { getReply } = require("./services/llm.cjs");
 const { saveChat } = require("./services/history.cjs");
 
 const app = express();
-
 app.use(cors());
-app.use(bodyParser.json({ limit: config.limits.maxBodySize }));
+app.use(bodyParser.json({ limit: "1mb" }));
 
-const PORT = config.app.port;
+const PORT = config.PORT;
 
-console.log("🚀 ThamAI v5 backend starting");
-console.log("• Port:", PORT);
-console.log("• Env :", config.app.env);
+console.log("🚀 ThamAI v5 backend starting on port", PORT);
 
-/* ---------- /chat (NON-STREAM) ---------- */
+/* ---------- /chat ---------- */
 app.post("/chat", async (req, res) => {
   try {
     const message = (req.body?.message || "").trim();
-    if (!message) {
-      return res.status(400).json({ error: "Missing message" });
-    }
+    if (!message) return res.status(400).json({ error: "Missing message" });
 
     const reply = await getReply(message);
 
@@ -32,19 +26,17 @@ app.post("/chat", async (req, res) => {
     saveChat("ai", reply);
 
     res.json({ reply });
-  } catch (err) {
-    console.error("❌ /chat error:", err);
+  } catch (e) {
+    console.error("chat error:", e);
     res.status(500).json({ error: "Server error" });
   }
 });
 
-/* ---------- /chat-stream (MAIN) ---------- */
+/* ---------- /chat-stream ---------- */
 app.post("/chat-stream", async (req, res) => {
   try {
     const message = (req.body?.message || "").trim();
-    if (!message) {
-      return res.status(400).end("Missing message");
-    }
+    if (!message) return res.status(400).end("Missing message");
 
     const reply = await getReply(message);
 
@@ -55,28 +47,20 @@ app.post("/chat-stream", async (req, res) => {
     res.setHeader("Cache-Control", "no-cache, no-transform");
     res.setHeader("X-Accel-Buffering", "no");
 
-    const chunkSize = config.limits.streamChunkSize;
-    const delayMs = config.limits.streamDelayMs;
-
-    for (let i = 0; i < reply.length; i += chunkSize) {
-      res.write(reply.slice(i, i + chunkSize));
-      await new Promise(r => setTimeout(r, delayMs));
+    for (let i = 0; i < reply.length; i += 60) {
+      res.write(reply.slice(i, i + 60));
+      await new Promise(r => setTimeout(r, 40));
     }
-
     res.end();
-  } catch (err) {
-    console.error("❌ /chat-stream error:", err);
+  } catch (e) {
+    console.error("chat-stream error:", e);
     res.status(500).end("ERROR");
   }
 });
 
 /* ---------- health ---------- */
-app.get("/", (_req, res) => {
-  res.json({
-    status: "ok",
-    name: config.app.name,
-    version: "v5 FINAL"
-  });
+app.get("/", (_, res) => {
+  res.json({ status: "ok", version: "ThamAI v5 FINAL" });
 });
 
 app.listen(PORT, () => {

@@ -1,9 +1,9 @@
 services:
   - type: web
-    name: thamai-backend
+    name: thamai-backend-v5
     env: node
-    buildCommand: "npm install"
-    startCommand: "node server.cjs"
-    envVars:
-      - key: OPENAI_API_KEY
-        sync: false
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node server.cjs
+    autoDeploy: true
