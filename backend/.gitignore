@@ -1,8 +1,2 @@
-node_modules/
+node_modules
 .env
-*.log
-
-# Temp
-*.wav
-*.webm
-*.mp3
