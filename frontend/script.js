@@ -1,4 +1,5 @@
-// ===== ThamAI v5 FINAL – STATIC FRONTEND =====
+// ===== ThamAI v5 – STATIC FRONTEND (CLEAN) =====
+
 const API_BASE = "https://thamai-pro-ultra-v4-free.onrender.com";
 
 // DOM
@@ -23,7 +24,7 @@ function addMessage(role, text) {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Speak (Web Speech API)
+// Speak – Web Speech API
 function speak(text) {
   if (!voiceEnabled) return;
   if (!("speechSynthesis" in window)) return;
@@ -49,12 +50,11 @@ async function sendMessage() {
     });
 
     const data = await res.json();
-    if (data.reply) {
-      addMessage("ai", data.reply);
-      speak(data.reply);
-    } else {
-      addMessage("ai", "⚠️ Không có phản hồi.");
-    }
+    const reply = data.reply || "⚠️ Không có phản hồi.";
+
+    addMessage("ai", reply);
+    speak(reply);
+
   } catch (e) {
     console.error(e);
     addMessage("ai", "❌ Lỗi kết nối backend.");
@@ -74,4 +74,4 @@ voiceBtn.addEventListener("click", () => {
     : "🔇 Âm thanh: TẮT";
 });
 
-console.log("✅ ThamAI v5 frontend loaded");
+console.log("✅ ThamAI v5 frontend loaded (clean)");
