@@ -1,143 +1,102 @@
-/* =========================
-   ThamAI v5 FINAL – Frontend
-   File: frontend/src/script.js
-   ========================= */
+/* =========================================================
+   ThamAI v5 FINAL – Frontend Script
+   Mode: Web Speech API (FREE – no backend audio)
+   ========================================================= */
 
-// ================= CONFIG =================
+/* ---------- CONFIG ---------- */
 const API_BASE =
-  import.meta?.env?.VITE_API_BASE ||
-  "https://thamai-pro-ultra-v4-free.onrender.com";
+  window.location.hostname.includes("localhost")
+    ? "http://localhost:3000"
+    : "https://thamai-backend-v5.onrender.com";
 
-// ================= DOM =================
-const chatBox = document.getElementById("chatbox");
-const userInput = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
-const micBtn = document.getElementById("micBtn");
-const voiceSelect = document.getElementById("voiceSelect");
+let speechEnabled = true;
+let currentVoice = null;
 
-// ================= UI HELPERS =================
-function appendUser(text) {
-  const div = document.createElement("div");
-  div.className = "msg user";
-  div.textContent = text;
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
+/* ---------- ELEMENTS ---------- */
+const chatBox = document.getElementById("chat-box");
+const input = document.getElementById("chat-input");
+const sendBtn = document.getElementById("send-btn");
+const voiceBtn = document.getElementById("voice-btn");
+
+/* ---------- INIT VOICE ---------- */
+function initVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  currentVoice =
+    voices.find(v => v.lang === "vi-VN" && v.name.toLowerCase().includes("female")) ||
+    voices.find(v => v.lang === "vi-VN") ||
+    voices[0] ||
+    null;
 }
 
-function appendAI(text) {
-  const div = document.createElement("div");
-  div.className = "msg ai";
-  div.textContent = text;
-  chatBox.appendChild(div);
-  chatBox.scrollTop = chatBox.scrollHeight;
-}
+window.speechSynthesis.onvoiceschanged = initVoice;
+initVoice();
 
-// ================= TTS =================
-function speak(text, voicePref = "female") {
-  if (!("speechSynthesis" in window)) return;
+/* ---------- SPEAK ---------- */
+function speak(text) {
+  if (!speechEnabled || !currentVoice) return;
+
+  window.speechSynthesis.cancel();
 
   const utter = new SpeechSynthesisUtterance(text);
-  const voices = speechSynthesis.getVoices();
+  utter.voice = currentVoice;
+  utter.lang = "vi-VN";
+  utter.rate = 1;
+  utter.pitch = 1;
 
-  let selected =
-    voices.find(v => v.lang?.startsWith("vi")) || voices[0];
-
-  if (voicePref === "male") {
-    const male = voices.find(v => /male/i.test(v.name));
-    if (male) selected = male;
-  }
-
-  if (selected) utter.voice = selected;
-
-  speechSynthesis.cancel();
-  speechSynthesis.speak(utter);
+  window.speechSynthesis.speak(utter);
 }
 
-// ================= SEND (STREAM) =================
-async function sendMessageStream() {
-  const text = userInput.value.trim();
-  if (!text) return;
+/* ---------- UI HELPERS ---------- */
+function addMessage(role, text) {
+  const div = document.createElement("div");
+  div.className = `msg ${role}`;
+  div.textContent = text;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-  appendUser(text);
-  userInput.value = "";
+function setLoading(state) {
+  sendBtn.disabled = state;
+  sendBtn.textContent = state ? "Đang trả lời..." : "Gửi";
+}
 
-  const aiDiv = document.createElement("div");
-  aiDiv.className = "msg ai";
-  chatBox.appendChild(aiDiv);
+/* ---------- SEND MESSAGE ---------- */
+async function sendMessage() {
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = "";
+  addMessage("user", message);
+  setLoading(true);
 
   try {
-    const resp = await fetch(`${API_BASE}/chat-stream`, {
+    const res = await fetch(`${API_BASE}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text })
+      body: JSON.stringify({ message })
     });
 
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let fullText = "";
+    if (!res.ok) throw new Error("Backend error");
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      const chunk = decoder.decode(value, { stream: true });
-      fullText += chunk;
-      aiDiv.textContent = fullText;
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    speak(fullText, voiceSelect?.value || "female");
-  } catch (e) {
-    aiDiv.textContent = "❗ Lỗi kết nối máy chủ.";
-    console.error(e);
+    const data = await res.json();
+    addMessage("ai", data.reply);
+    speak(data.reply);
+  } catch (err) {
+    console.error(err);
+    addMessage("ai", "❌ Không kết nối được backend.");
+  } finally {
+    setLoading(false);
   }
 }
 
-// ================= EVENTS =================
-sendBtn?.addEventListener("click", sendMessageStream);
+/* ---------- EVENTS ---------- */
+sendBtn.addEventListener("click", sendMessage);
 
-userInput?.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    sendMessageStream();
-  }
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") sendMessage();
 });
 
-// ================= MIC (STT – 1 LẦN DUY NHẤT) =================
-let recognition = null;
-let isListening = false;
-
-if (micBtn) {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (SR) {
-    recognition = new SR();
-    recognition.lang = "vi-VN";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      isListening = true;
-      micBtn.disabled = true;
-    };
-
-    recognition.onend = () => {
-      isListening = false;
-      micBtn.disabled = false;
-    };
-
-    recognition.onresult = e => {
-      const text = e.results[0][0].transcript;
-      userInput.value = text;
-      sendMessageStream();
-    };
-
-    recognition.onerror = () => {
-      recognition.stop();
-    };
-
-    micBtn.addEventListener("click", () => {
-      if (!isListening) recognition.start();
-    });
-  }
-}
+voiceBtn.addEventListener("click", () => {
+  speechEnabled = !speechEnabled;
+  voiceBtn.textContent = speechEnabled ? "🔊 Âm thanh: BẬT" : "🔇 Âm thanh: TẮT";
+});
