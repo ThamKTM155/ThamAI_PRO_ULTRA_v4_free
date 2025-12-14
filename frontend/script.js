@@ -1,163 +1,102 @@
-const API_BASE = import.meta.env.VITE_API_BASE;
-// ===============================
-// ThamAI PRO ULTRA - Frontend
-// script.js (STABLE VERSION)
-// ===============================
+/* =========================================================
+   ThamAI v5 FINAL – Frontend Script
+   Mode: Web Speech API (FREE – no backend audio)
+   ========================================================= */
 
-let recognition = null;
-let isListening = false;
-let hasSentFromMic = false;
+/* ---------- CONFIG ---------- */
+const API_BASE =
+  window.location.hostname.includes("localhost")
+    ? "http://localhost:3000"
+    : "https://thamai-backend-v5.onrender.com";
 
-// API
-const STREAM_API = "https://thamai-pro-ultra-v4-free.onrender.com/chat-stream";
+let speechEnabled = true;
+let currentVoice = null;
 
-// DOM
-const chatBox = document.getElementById("chatbox");
-const userInput = document.getElementById("userInput");
-const sendBtn = document.getElementById("sendBtn");
-const micBtn = document.getElementById("micBtn");
-const voiceSelect = document.getElementById("voiceSelect");
+/* ---------- ELEMENTS ---------- */
+const chatBox = document.getElementById("chat-box");
+const input = document.getElementById("chat-input");
+const sendBtn = document.getElementById("send-btn");
+const voiceBtn = document.getElementById("voice-btn");
 
-// ===============================
-// UI helpers
-// ===============================
-function appendUser(text) {
-  const d = document.createElement("div");
-  d.className = "msg user";
-  d.textContent = text;
-  chatBox.appendChild(d);
-  chatBox.scrollTop = chatBox.scrollHeight;
+/* ---------- INIT VOICE ---------- */
+function initVoice() {
+  const voices = window.speechSynthesis.getVoices();
+  currentVoice =
+    voices.find(v => v.lang === "vi-VN" && v.name.toLowerCase().includes("female")) ||
+    voices.find(v => v.lang === "vi-VN") ||
+    voices[0] ||
+    null;
 }
 
-function appendAIContainer() {
-  const d = document.createElement("div");
-  d.className = "msg ai";
-  chatBox.appendChild(d);
-  chatBox.scrollTop = chatBox.scrollHeight;
-  return d;
-}
+window.speechSynthesis.onvoiceschanged = initVoice;
+initVoice();
 
-// ===============================
-// Browser TTS (free)
-// ===============================
-function speak(text, voicePref = "female") {
-  if (!("speechSynthesis" in window)) return;
+/* ---------- SPEAK ---------- */
+function speak(text) {
+  if (!speechEnabled || !currentVoice) return;
 
   window.speechSynthesis.cancel();
-  const ut = new SpeechSynthesisUtterance(text);
-  const voices = speechSynthesis.getVoices() || [];
 
-  let chosen =
-    voices.find(v => v.lang && v.lang.startsWith("vi")) || voices[0];
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.voice = currentVoice;
+  utter.lang = "vi-VN";
+  utter.rate = 1;
+  utter.pitch = 1;
 
-  if (voicePref === "male") {
-    const male = voices.find(v => /male/i.test(v.name));
-    if (male) chosen = male;
-  }
-
-  if (chosen) ut.voice = chosen;
-  speechSynthesis.speak(ut);
+  window.speechSynthesis.speak(utter);
 }
 
-// ===============================
-// SEND MESSAGE (STREAM – DUY NHẤT)
-// ===============================
-async function sendMessageStream(text) {
-  if (!text) return;
+/* ---------- UI HELPERS ---------- */
+function addMessage(role, text) {
+  const div = document.createElement("div");
+  div.className = `msg ${role}`;
+  div.textContent = text;
+  chatBox.appendChild(div);
+  chatBox.scrollTop = chatBox.scrollHeight;
+}
 
-  appendUser(text);
-  const aiDiv = appendAIContainer();
+function setLoading(state) {
+  sendBtn.disabled = state;
+  sendBtn.textContent = state ? "Đang trả lời..." : "Gửi";
+}
+
+/* ---------- SEND MESSAGE ---------- */
+async function sendMessage() {
+  const message = input.value.trim();
+  if (!message) return;
+
+  input.value = "";
+  addMessage("user", message);
+  setLoading(true);
 
   try {
-    const resp = await fetch(STREAM_API, {
+    const res = await fetch(`${API_BASE}/chat`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message: text })
+      body: JSON.stringify({ message })
     });
 
-    const reader = resp.body.getReader();
-    const decoder = new TextDecoder("utf-8");
-    let fullText = "";
+    if (!res.ok) throw new Error("Backend error");
 
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-
-      fullText += decoder.decode(value, { stream: true });
-      aiDiv.textContent = fullText;
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }
-
-    speak(fullText, voiceSelect.value);
+    const data = await res.json();
+    addMessage("ai", data.reply);
+    speak(data.reply);
   } catch (err) {
-    aiDiv.textContent = "❗ Lỗi kết nối máy chủ.";
     console.error(err);
+    addMessage("ai", "❌ Không kết nối được backend.");
+  } finally {
+    setLoading(false);
   }
 }
 
-// ===============================
-// ENTER & BUTTON SEND
-// ===============================
-sendBtn?.addEventListener("click", () => {
-  const text = userInput.value.trim();
-  userInput.value = "";
-  sendMessageStream(text);
+/* ---------- EVENTS ---------- */
+sendBtn.addEventListener("click", sendMessage);
+
+input.addEventListener("keydown", e => {
+  if (e.key === "Enter") sendMessage();
 });
 
-userInput.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey) {
-    e.preventDefault();
-    const text = userInput.value.trim();
-    userInput.value = "";
-    sendMessageStream(text);
-  }
+voiceBtn.addEventListener("click", () => {
+  speechEnabled = !speechEnabled;
+  voiceBtn.textContent = speechEnabled ? "🔊 Âm thanh: BẬT" : "🔇 Âm thanh: TẮT";
 });
-
-// ===============================
-// MICROPHONE – CHỐT LỖI LẶP
-// ===============================
-if (micBtn) {
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SR) {
-    micBtn.onclick = () =>
-      alert("Trình duyệt không hỗ trợ ghi âm. Dùng Chrome / Edge mới.");
-  } else {
-    recognition = new SR();
-    recognition.lang = "vi-VN";
-    recognition.interimResults = false;
-    recognition.maxAlternatives = 1;
-
-    recognition.onstart = () => {
-      isListening = true;
-      hasSentFromMic = false;
-      micBtn.disabled = true;
-      micBtn.textContent = "🎙️";
-    };
-
-    recognition.onend = () => {
-      isListening = false;
-      micBtn.disabled = false;
-      micBtn.textContent = "🎤";
-    };
-
-    recognition.onresult = (e) => {
-      if (hasSentFromMic) return; // 🔒 CHỐT GỬI 1 LẦN
-
-      hasSentFromMic = true;
-      const text = e.results[0][0].transcript.trim();
-
-      recognition.stop(); // 🛑 DỪNG NGAY – TRÁNH PHÁT SINH KẾT QUẢ PHỤ
-      sendMessageStream(text);
-    };
-
-    recognition.onerror = () => {
-      recognition.stop();
-    };
-
-    micBtn.addEventListener("click", () => {
-      if (isListening) return;
-      recognition.start();
-    });
-  }
-}
