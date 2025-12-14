@@ -2,32 +2,26 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <title>ThamAI v5</title>
+  <title>ThamAI v5 FINAL</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
   <div id="app">
-   <div id="chat-input">
-  <input
-    type="text"
-    id="user-input"
-    placeholder="Nhập câu hỏi..."
-  />
-  <button id="send-btn">Gửi</button>
-</div>
+    <div id="chat-box"></div>
 
-
-    <div class="controls">
-      <button id="micBtn">🎤</button>
-      <button id="sendBtn">Gửi</button>
-      <select id="voiceSelect">
-        <option value="female">Giọng nữ</option>
-        <option value="male">Giọng nam</option>
-      </select>
+    <div id="chat-input">
+      <input
+        type="text"
+        id="user-input"
+        placeholder="Nhập câu hỏi..."
+      />
+      <button id="send-btn">Gửi</button>
+      <button id="voice-btn">🔊 Âm thanh: BẬT</button>
     </div>
   </div>
 
-  <script type="module" src="/src/main.js"></script>
+  <!-- CHỈ 1 SCRIPT -->
+  <script src="./script.js"></script>
 </body>
-<script src="./script.js"></script>
-</html>4:26 CH 14/12/2025
+</html>
