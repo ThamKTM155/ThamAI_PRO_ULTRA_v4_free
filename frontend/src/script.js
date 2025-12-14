@@ -1,76 +1,72 @@
-const API_BASE = import.meta.env.VITE_API_BASE;
+/* =========================
+   ThamAI v5 FINAL – Frontend
+   File: frontend/src/script.js
+   ========================= */
 
-// ===============================
-// ThamAI PRO ULTRA - Frontend
-// script.js (STABLE VERSION)
-// ===============================
+// ================= CONFIG =================
+const API_BASE =
+  import.meta?.env?.VITE_API_BASE ||
+  "https://thamai-pro-ultra-v4-free.onrender.com";
 
-let recognition = null;
-let isListening = false;
-let hasSentFromMic = false;
-
-// API
-const STREAM_API = "https://thamai-pro-ultra-v4-free.onrender.com/chat-stream";
-
-// DOM
+// ================= DOM =================
 const chatBox = document.getElementById("chatbox");
 const userInput = document.getElementById("userInput");
 const sendBtn = document.getElementById("sendBtn");
 const micBtn = document.getElementById("micBtn");
 const voiceSelect = document.getElementById("voiceSelect");
 
-// ===============================
-// UI helpers
-// ===============================
+// ================= UI HELPERS =================
 function appendUser(text) {
-  const d = document.createElement("div");
-  d.className = "msg user";
-  d.textContent = text;
-  chatBox.appendChild(d);
+  const div = document.createElement("div");
+  div.className = "msg user";
+  div.textContent = text;
+  chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function appendAIContainer() {
-  const d = document.createElement("div");
-  d.className = "msg ai";
-  chatBox.appendChild(d);
+function appendAI(text) {
+  const div = document.createElement("div");
+  div.className = "msg ai";
+  div.textContent = text;
+  chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
-  return d;
 }
 
-// ===============================
-// Browser TTS (free)
-// ===============================
+// ================= TTS =================
 function speak(text, voicePref = "female") {
   if (!("speechSynthesis" in window)) return;
 
-  window.speechSynthesis.cancel();
-  const ut = new SpeechSynthesisUtterance(text);
-  const voices = speechSynthesis.getVoices() || [];
+  const utter = new SpeechSynthesisUtterance(text);
+  const voices = speechSynthesis.getVoices();
 
-  let chosen =
-    voices.find(v => v.lang && v.lang.startsWith("vi")) || voices[0];
+  let selected =
+    voices.find(v => v.lang?.startsWith("vi")) || voices[0];
 
   if (voicePref === "male") {
     const male = voices.find(v => /male/i.test(v.name));
-    if (male) chosen = male;
+    if (male) selected = male;
   }
 
-  if (chosen) ut.voice = chosen;
-  speechSynthesis.speak(ut);
+  if (selected) utter.voice = selected;
+
+  speechSynthesis.cancel();
+  speechSynthesis.speak(utter);
 }
 
-// ===============================
-// SEND MESSAGE (STREAM – DUY NHẤT)
-// ===============================
-async function sendMessageStream(text) {
+// ================= SEND (STREAM) =================
+async function sendMessageStream() {
+  const text = userInput.value.trim();
   if (!text) return;
 
   appendUser(text);
-  const aiDiv = appendAIContainer();
+  userInput.value = "";
+
+  const aiDiv = document.createElement("div");
+  aiDiv.className = "msg ai";
+  chatBox.appendChild(aiDiv);
 
   try {
-    const resp = await fetch(STREAM_API, {
+    const resp = await fetch(`${API_BASE}/chat-stream`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ message: text })
@@ -84,46 +80,37 @@ async function sendMessageStream(text) {
       const { value, done } = await reader.read();
       if (done) break;
 
-      fullText += decoder.decode(value, { stream: true });
+      const chunk = decoder.decode(value, { stream: true });
+      fullText += chunk;
       aiDiv.textContent = fullText;
       chatBox.scrollTop = chatBox.scrollHeight;
     }
 
-    speak(fullText, voiceSelect.value);
-  } catch (err) {
+    speak(fullText, voiceSelect?.value || "female");
+  } catch (e) {
     aiDiv.textContent = "❗ Lỗi kết nối máy chủ.";
-    console.error(err);
+    console.error(e);
   }
 }
 
-// ===============================
-// ENTER & BUTTON SEND
-// ===============================
-sendBtn?.addEventListener("click", () => {
-  const text = userInput.value.trim();
-  userInput.value = "";
-  sendMessageStream(text);
-});
+// ================= EVENTS =================
+sendBtn?.addEventListener("click", sendMessageStream);
 
-userInput.addEventListener("keydown", e => {
+userInput?.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
-    const text = userInput.value.trim();
-    userInput.value = "";
-    sendMessageStream(text);
+    sendMessageStream();
   }
 });
 
-// ===============================
-// MICROPHONE – CHỐT LỖI LẶP
-// ===============================
+// ================= MIC (STT – 1 LẦN DUY NHẤT) =================
+let recognition = null;
+let isListening = false;
+
 if (micBtn) {
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 
-  if (!SR) {
-    micBtn.onclick = () =>
-      alert("Trình duyệt không hỗ trợ ghi âm. Dùng Chrome / Edge mới.");
-  } else {
+  if (SR) {
     recognition = new SR();
     recognition.lang = "vi-VN";
     recognition.interimResults = false;
@@ -131,25 +118,18 @@ if (micBtn) {
 
     recognition.onstart = () => {
       isListening = true;
-      hasSentFromMic = false;
       micBtn.disabled = true;
-      micBtn.textContent = "🎙️";
     };
 
     recognition.onend = () => {
       isListening = false;
       micBtn.disabled = false;
-      micBtn.textContent = "🎤";
     };
 
-    recognition.onresult = (e) => {
-      if (hasSentFromMic) return; // 🔒 CHỐT GỬI 1 LẦN
-
-      hasSentFromMic = true;
-      const text = e.results[0][0].transcript.trim();
-
-      recognition.stop(); // 🛑 DỪNG NGAY – TRÁNH PHÁT SINH KẾT QUẢ PHỤ
-      sendMessageStream(text);
+    recognition.onresult = e => {
+      const text = e.results[0][0].transcript;
+      userInput.value = text;
+      sendMessageStream();
     };
 
     recognition.onerror = () => {
@@ -157,8 +137,7 @@ if (micBtn) {
     };
 
     micBtn.addEventListener("click", () => {
-      if (isListening) return;
-      recognition.start();
+      if (!isListening) recognition.start();
     });
   }
 }
