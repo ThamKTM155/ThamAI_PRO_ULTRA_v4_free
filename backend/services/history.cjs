@@ -1,34 +1,31 @@
-// backend/services/history.cjs
-import fs from "fs";
-import path from "path";
+const fs = require("fs");
+const path = require("path");
+const { paths } = require("../config.cjs");
 
-const DATA_DIR = path.resolve("backend/data");
-const FILE_PATH = path.join(DATA_DIR, "chats.json");
-
-if (!fs.existsSync(DATA_DIR)) {
-  fs.mkdirSync(DATA_DIR, { recursive: true });
+function ensureFile() {
+  const dir = path.dirname(paths.chatsFile);
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true });
+  }
+  if (!fs.existsSync(paths.chatsFile)) {
+    fs.writeFileSync(paths.chatsFile, "[]", "utf-8");
+  }
 }
 
-if (!fs.existsSync(FILE_PATH)) {
-  fs.writeFileSync(FILE_PATH, "[]", "utf8");
-}
-
-export function saveChat(role, content) {
+function saveChat(role, content) {
   try {
-    const raw = fs.readFileSync(FILE_PATH, "utf8");
+    ensureFile();
+    const raw = fs.readFileSync(paths.chatsFile, "utf-8");
     const chats = JSON.parse(raw);
-
     chats.push({
       role,
       content,
       time: new Date().toISOString()
     });
-
-    // giới hạn 200 dòng cho nhẹ
-    if (chats.length > 200) chats.shift();
-
-    fs.writeFileSync(FILE_PATH, JSON.stringify(chats, null, 2), "utf8");
-  } catch (e) {
-    console.error("saveChat error:", e);
+    fs.writeFileSync(paths.chatsFile, JSON.stringify(chats, null, 2));
+  } catch (err) {
+    console.warn("⚠️ saveChat skipped:", err.message);
   }
 }
+
+module.exports = { saveChat };
