@@ -1,4 +1,4 @@
-// ===== ThamAI v5 – STATIC FRONTEND (STABLE) =====
+// ===== ThamAI v5 – FRONTEND STABLE =====
 const API_BASE = "https://thamai-pro-ultra-v4-free.onrender.com";
 
 // DOM
@@ -15,7 +15,7 @@ let selectedVoice = "female";
 let isSending = false;
 
 // Safety
-if (!input || !sendBtn || !chatBox || !voiceBtn || !micBtn || !voiceSelect) {
+if (!input || !sendBtn || !chatBox) {
   console.error("❌ Missing DOM elements");
 }
 
@@ -28,22 +28,20 @@ function addMessage(role, text) {
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-// Speak – Web Speech API
+// Speak
 function speak(text) {
-  if (!voiceEnabled) return;
-  if (!("speechSynthesis" in window)) return;
+  if (!voiceEnabled || !("speechSynthesis" in window)) return;
 
   speechSynthesis.cancel();
-
   const utter = new SpeechSynthesisUtterance(text);
   utter.lang = "vi-VN";
 
   if (selectedVoice === "female") {
-    utter.rate = 0.95;
     utter.pitch = 1.2;
+    utter.rate = 0.95;
   } else {
-    utter.rate = 0.9;
     utter.pitch = 0.8;
+    utter.rate = 0.9;
   }
 
   speechSynthesis.speak(utter);
@@ -76,8 +74,7 @@ async function sendMessage() {
     addMessage("ai", reply);
     speak(reply);
 
-  } catch (err) {
-    console.error(err);
+  } catch (e) {
     addMessage("ai", "❌ Lỗi kết nối backend.");
   } finally {
     isSending = false;
@@ -87,37 +84,31 @@ async function sendMessage() {
 }
 
 // Events
-sendBtn.addEventListener("click", sendMessage);
-input.addEventListener("keydown", e => {
-  if (e.key === "Enter") sendMessage();
-});
+sendBtn.onclick = sendMessage;
+input.onkeydown = e => e.key === "Enter" && sendMessage();
 
-voiceSelect.addEventListener("change", () => {
-  selectedVoice = voiceSelect.value;
-});
+voiceSelect.onchange = () => selectedVoice = voiceSelect.value;
 
-voiceBtn.addEventListener("click", () => {
+voiceBtn.onclick = () => {
   voiceEnabled = !voiceEnabled;
   voiceBtn.textContent = voiceEnabled
     ? "🔊 Âm thanh: BẬT"
     : "🔇 Âm thanh: TẮT";
-});
+};
 
-// Micro – Speech to Text
+// Mic
 let recognition;
 if ("webkitSpeechRecognition" in window) {
   recognition = new webkitSpeechRecognition();
   recognition.lang = "vi-VN";
-  recognition.continuous = false;
-
-  recognition.onresult = (event) => {
-    input.value = event.results[0][0].transcript;
+  recognition.onresult = e => {
+    input.value = e.results[0][0].transcript;
   };
 }
 
-micBtn.addEventListener("click", () => {
+micBtn.onclick = () => {
   if (recognition) recognition.start();
   else alert("Trình duyệt không hỗ trợ micro.");
-});
+};
 
-console.log("✅ ThamAI v5 frontend loaded – mic & voice OK");
+console.log("✅ ThamAI v5 frontend ready");

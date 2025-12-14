@@ -113,27 +113,3 @@ body {
   font-size: 18px;
   cursor: pointer;
 }
-.input-area {
-  display: flex;
-  gap: 6px;
-  padding: 10px;
-  background: #020617;
-  border-top: 1px solid #1e293b;
-}
-
-#mic-btn {
-  background: #334155;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px;
-  cursor: pointer;
-}
-
-#voice-select {
-  background: #1e293b;
-  color: #e5e7eb;
-  border-radius: 10px;
-  border: none;
-  padding: 8px;
-}
