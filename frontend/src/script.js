@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE;
+
 // ===============================
 // ThamAI PRO ULTRA - Frontend
 // script.js (STABLE VERSION)
