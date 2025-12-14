@@ -2,29 +2,47 @@ const fs = require("fs");
 const path = require("path");
 const { paths } = require("../config.cjs");
 
+const chatsFile = paths.chatsFile;
+
 function ensureFile() {
-  const dir = path.dirname(paths.chatsFile);
-  if (!fs.existsSync(dir)) {
-    fs.mkdirSync(dir, { recursive: true });
-  }
-  if (!fs.existsSync(paths.chatsFile)) {
-    fs.writeFileSync(paths.chatsFile, "[]", "utf-8");
+  if (!fs.existsSync(chatsFile)) {
+    fs.mkdirSync(path.dirname(chatsFile), { recursive: true });
+    fs.writeFileSync(
+      chatsFile,
+      JSON.stringify(
+        {
+          version: "ThamAI v5 FINAL",
+          created_at: new Date().toISOString(),
+          chats: []
+        },
+        null,
+        2
+      ),
+      "utf-8"
+    );
   }
 }
 
-function saveChat(role, content) {
+function saveChat(role, text) {
   try {
     ensureFile();
-    const raw = fs.readFileSync(paths.chatsFile, "utf-8");
-    const chats = JSON.parse(raw);
-    chats.push({
+    const raw = fs.readFileSync(chatsFile, "utf-8");
+    const data = JSON.parse(raw);
+
+    data.chats.push({
       role,
-      content,
+      text,
       time: new Date().toISOString()
     });
-    fs.writeFileSync(paths.chatsFile, JSON.stringify(chats, null, 2));
+
+    // Giới hạn 500 tin gần nhất
+    if (data.chats.length > 500) {
+      data.chats = data.chats.slice(-500);
+    }
+
+    fs.writeFileSync(chatsFile, JSON.stringify(data, null, 2), "utf-8");
   } catch (err) {
-    console.warn("⚠️ saveChat skipped:", err.message);
+    console.error("❌ saveChat error:", err);
   }
 }
 
