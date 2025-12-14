@@ -1,102 +1,79 @@
-/* =========================================================
-   ThamAI v5 FINAL – Frontend Script
-   Mode: Web Speech API (FREE – no backend audio)
-   ========================================================= */
+// ===== ThamAI v5 FINAL – STATIC FRONTEND =====
 
-/* ---------- CONFIG ---------- */
-const API_BASE =
-  window.location.hostname.includes("localhost")
-    ? "http://localhost:3000"
-    : "https://thamai-backend-v5.onrender.com";
+const API_BASE = "https://thamai-pro-ultra-v4-free.onrender.com";
 
-let speechEnabled = true;
-let currentVoice = null;
-
-/* ---------- ELEMENTS ---------- */
+// DOM
 const chatBox = document.getElementById("chat-box");
 const input = document.getElementById("chat-input");
 const sendBtn = document.getElementById("send-btn");
 const voiceBtn = document.getElementById("voice-btn");
 
-/* ---------- INIT VOICE ---------- */
-function initVoice() {
-  const voices = window.speechSynthesis.getVoices();
-  currentVoice =
-    voices.find(v => v.lang === "vi-VN" && v.name.toLowerCase().includes("female")) ||
-    voices.find(v => v.lang === "vi-VN") ||
-    voices[0] ||
-    null;
+let voiceEnabled = true;
+
+// Safety check (RẤT QUAN TRỌNG)
+if (!chatBox || !input || !sendBtn) {
+  console.error("❌ Missing DOM elements");
 }
 
-window.speechSynthesis.onvoiceschanged = initVoice;
-initVoice();
-
-/* ---------- SPEAK ---------- */
-function speak(text) {
-  if (!speechEnabled || !currentVoice) return;
-
-  window.speechSynthesis.cancel();
-
-  const utter = new SpeechSynthesisUtterance(text);
-  utter.voice = currentVoice;
-  utter.lang = "vi-VN";
-  utter.rate = 1;
-  utter.pitch = 1;
-
-  window.speechSynthesis.speak(utter);
-}
-
-/* ---------- UI HELPERS ---------- */
+// Add message
 function addMessage(role, text) {
   const div = document.createElement("div");
-  div.className = `msg ${role}`;
-  div.textContent = text;
+  div.className = role === "user" ? "msg user" : "msg ai";
+  div.innerText = text;
   chatBox.appendChild(div);
   chatBox.scrollTop = chatBox.scrollHeight;
 }
 
-function setLoading(state) {
-  sendBtn.disabled = state;
-  sendBtn.textContent = state ? "Đang trả lời..." : "Gửi";
+// Speak (Web Speech API)
+function speak(text) {
+  if (!voiceEnabled) return;
+  if (!("speechSynthesis" in window)) return;
+
+  const utter = new SpeechSynthesisUtterance(text);
+  utter.lang = "vi-VN";
+  utter.rate = 1;
+  utter.pitch = 1;
+  speechSynthesis.speak(utter);
 }
 
-/* ---------- SEND MESSAGE ---------- */
+// Send message
 async function sendMessage() {
-  const message = input.value.trim();
-  if (!message) return;
+  const text = input.value.trim();
+  if (!text) return;
 
+  addMessage("user", text);
   input.value = "";
-  addMessage("user", message);
-  setLoading(true);
 
   try {
-    const res = await fetch(`${API_BASE}/chat`, {
+    const res = await fetch(API_BASE + "/chat", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ message })
+      body: JSON.stringify({ message: text })
     });
 
-    if (!res.ok) throw new Error("Backend error");
-
     const data = await res.json();
-    addMessage("ai", data.reply);
-    speak(data.reply);
-  } catch (err) {
-    console.error(err);
-    addMessage("ai", "❌ Không kết nối được backend.");
-  } finally {
-    setLoading(false);
+    if (data.reply) {
+      addMessage("ai", data.reply);
+      speak(data.reply);
+    } else {
+      addMessage("ai", "⚠️ Không có phản hồi.");
+    }
+  } catch (e) {
+    console.error(e);
+    addMessage("ai", "❌ Lỗi kết nối backend.");
   }
 }
 
-/* ---------- EVENTS ---------- */
+// Events
 sendBtn.addEventListener("click", sendMessage);
 
-input.addEventListener("keydown", e => {
+input.addEventListener("keydown", (e) => {
   if (e.key === "Enter") sendMessage();
 });
 
 voiceBtn.addEventListener("click", () => {
-  speechEnabled = !speechEnabled;
-  voiceBtn.textContent = speechEnabled ? "🔊 Âm thanh: BẬT" : "🔇 Âm thanh: TẮT";
+  voiceEnabled = !voiceEnabled;
+  voiceBtn.innerText = voiceEnabled ? "🔊 Âm thanh: BẬT" : "🔇 Âm thanh: TẮT";
 });
+
+console.log("✅ ThamAI v5 frontend loaded");
