@@ -10,14 +10,19 @@
 
   <div id="app">
     <div id="chat-box"></div>
-
-    <div id="chat-input">
+<div class="input-area">
+  <button id="mic-btn" title="Nói">🎤</button>
+    
       <input
         type="text"
         id="user-input"
         placeholder="Nhập câu hỏi..."
       />
       <button id="send-btn">Gửi</button>
+<select id="voice-select">
+    <option value="female" selected>Giọng nữ</option>
+    <option value="male">Giọng nam</option>
+  </select>
       <button id="voice-btn">🔊 Âm thanh: BẬT</button>
     </div>
   </div>
