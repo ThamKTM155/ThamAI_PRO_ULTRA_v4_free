@@ -85,7 +85,22 @@ async function sendMessage() {
 
 // Events
 sendBtn.onclick = sendMessage;
-input.onkeydown = e => e.key === "Enter" && sendMessage();
+let isComposing = false;
+
+input.addEventListener("compositionstart", () => {
+  isComposing = true;
+});
+
+input.addEventListener("compositionend", () => {
+  isComposing = false;
+});
+
+input.addEventListener("keydown", (e) => {
+  if (e.key === "Enter" && !isComposing) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
 
 voiceSelect.onchange = () => selectedVoice = voiceSelect.value;
 
