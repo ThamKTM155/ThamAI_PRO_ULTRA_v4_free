@@ -1,4 +1,4 @@
-// ===== ThamAI v5 – FRONTEND STABLE =====
+// ===== ThamAI v5 – FRONTEND FINAL =====
 const API_BASE = "https://thamai-pro-ultra-v4-free.onrender.com";
 
 // DOM
@@ -13,6 +13,7 @@ const voiceSelect = document.getElementById("voice-select");
 let voiceEnabled = true;
 let selectedVoice = "female";
 let isSending = false;
+let isComposing = false;
 
 // Safety
 if (!input || !sendBtn || !chatBox) {
@@ -85,15 +86,9 @@ async function sendMessage() {
 
 // Events
 sendBtn.onclick = sendMessage;
-let isComposing = false;
 
-input.addEventListener("compositionstart", () => {
-  isComposing = true;
-});
-
-input.addEventListener("compositionend", () => {
-  isComposing = false;
-});
+input.addEventListener("compositionstart", () => isComposing = true);
+input.addEventListener("compositionend", () => isComposing = false);
 
 input.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !isComposing) {
@@ -125,14 +120,10 @@ micBtn.onclick = () => {
   if (recognition) recognition.start();
   else alert("Trình duyệt không hỗ trợ micro.");
 };
-// ==== FIX INPUT LOCK (IMPORTANT) ====
-isSending = false;
 
-if (input) {
-  input.disabled = false;
-  input.removeAttribute("readonly");
-  input.style.pointerEvents = "auto";
-}
+// Final unlock (an toàn)
+input.disabled = false;
+input.removeAttribute("readonly");
+input.style.pointerEvents = "auto";
 
-console.log("✅ Input unlocked & ready");
-console.log("✅ ThamAI v5 frontend ready");
+console.log("✅ ThamAI v5 frontend READY");
