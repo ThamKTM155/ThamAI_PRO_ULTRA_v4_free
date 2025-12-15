@@ -1,68 +1,69 @@
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
-
-const config = require("./config.cjs");
-const { getReply } = require("./services/llm.cjs");
-const { saveChat } = require("./services/history.cjs");
+const fetch = require("node-fetch");
 
 const app = express();
 app.use(cors());
-app.use(bodyParser.json({ limit: "1mb" }));
+app.use(express.json());
 
-const PORT = config.PORT;
+const PORT = process.env.PORT || 3000;
+const OPENROUTER_API_KEY = process.env.OPENROUTER_API_KEY;
 
-console.log("🚀 ThamAI v5 backend starting on port", PORT);
+// Health check
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    mode: "openrouter",
+    model: "free"
+  });
+});
 
-/* ---------- /chat ---------- */
+// Chat
 app.post("/chat", async (req, res) => {
+  const { message } = req.body;
+
+  if (!message) {
+    return res.json({ reply: "⚠️ Nội dung trống." });
+  }
+
   try {
-    const message = (req.body?.message || "").trim();
-    if (!message) return res.status(400).json({ error: "Missing message" });
+    const response = await fetch(
+      "https://openrouter.ai/api/v1/chat/completions",
+      {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${OPENROUTER_API_KEY}`,
+          "Content-Type": "application/json",
+          "HTTP-Referer": "https://thamai.onrender.com",
+          "X-Title": "ThamAI Free"
+        },
+        body: JSON.stringify({
+          model: "openrouter/auto",
+          messages: [
+            {
+              role: "system",
+              content:
+                "Bạn là ThamAI, trợ lý AI tiếng Việt, lịch sự, ngắn gọn."
+            },
+            { role: "user", content: message }
+          ]
+        })
+      }
+    );
 
-    const reply = await getReply(message);
-
-    saveChat("user", message);
-    saveChat("ai", reply);
+    const data = await response.json();
+    const reply =
+      data.choices?.[0]?.message?.content ||
+      "⚠️ OpenRouter không phản hồi.";
 
     res.json({ reply });
-  } catch (e) {
-    console.error("chat error:", e);
-    res.status(500).json({ error: "Server error" });
+
+  } catch (err) {
+    console.error(err);
+    res.json({ reply: "❌ Backend lỗi khi gọi OpenRouter." });
   }
 });
 
-/* ---------- /chat-stream ---------- */
-app.post("/chat-stream", async (req, res) => {
-  try {
-    const message = (req.body?.message || "").trim();
-    if (!message) return res.status(400).end("Missing message");
-
-    const reply = await getReply(message);
-
-    saveChat("user", message);
-    saveChat("ai", reply);
-
-    res.setHeader("Content-Type", "text/plain; charset=utf-8");
-    res.setHeader("Cache-Control", "no-cache, no-transform");
-    res.setHeader("X-Accel-Buffering", "no");
-
-    for (let i = 0; i < reply.length; i += 60) {
-      res.write(reply.slice(i, i + 60));
-      await new Promise(r => setTimeout(r, 40));
-    }
-    res.end();
-  } catch (e) {
-    console.error("chat-stream error:", e);
-    res.status(500).end("ERROR");
-  }
-});
-
-/* ---------- health ---------- */
-app.get("/", (_, res) => {
-  res.json({ status: "ok", version: "ThamAI v5 FINAL" });
-});
-
-app.listen(PORT, () => {
-  console.log(`✅ ThamAI v5 backend listening on ${PORT}`);
-});
+app.listen(PORT, () =>
+  console.log("🚀 ThamAI backend running on port " + PORT)
+);
