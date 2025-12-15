@@ -110,5 +110,14 @@ micBtn.onclick = () => {
   if (recognition) recognition.start();
   else alert("Trình duyệt không hỗ trợ micro.");
 };
+// ==== FIX INPUT LOCK (IMPORTANT) ====
+isSending = false;
 
+if (input) {
+  input.disabled = false;
+  input.removeAttribute("readonly");
+  input.style.pointerEvents = "auto";
+}
+
+console.log("✅ Input unlocked & ready");
 console.log("✅ ThamAI v5 frontend ready");
