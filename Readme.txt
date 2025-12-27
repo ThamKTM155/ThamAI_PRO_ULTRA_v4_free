@@ -158,3 +158,4 @@ Bắt đầu một dự án mới song song (không ảnh hưởng ThamAI v4 fre
 Nâng cấp lộ trình ThamAI v6 / v7 (multi-user, lưu lịch sử, streaming, v.v.).
 
 Anh chỉ cần nói: “Sang dự án mới” hoặc “Nâng cấp ThamAI”.
+⛔ Phiên bản này đã được lưu trữ. Việc phát triển tiếp theo sẽ được thực hiện trong kho lưu trữ mới.
